@@ -6,7 +6,7 @@ pipeline {
         stage('Clone Repository') {
             steps {
                 git branch: 'main',
-                    url: 'https://github.com/hasssanraheem/Movie_System.git'
+                    url: 'https://github.com/moizaimran33/Movie_system.git'
             }
         }
 
@@ -28,7 +28,7 @@ pipeline {
 
     post {
         success {
-            echo 'Pipeline completed successfully! App is running on port 5001.'
+            echo 'Pipeline completed! App running on port 5001.'
         }
         failure {
             echo 'Pipeline failed!'
