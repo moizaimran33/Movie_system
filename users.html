@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Movie Booking</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<script>
+  const role = localStorage.getItem('userRole');
+  if (role !== 'user') {
+    alert('Access denied!');
+    window.location.href = 'login.html';
+  }
+</script>
+
+<div class="container mt-5">
+  <h2 class="text-center mb-4">🎟️ Movie Booking Portal</h2>
+  <button class="btn btn-secondary mb-3 float-end" onclick="logout()">Logout</button>
+  <h4>Available Movies</h4>
+
+  <table class="table table-bordered">
+    <thead class="table-light">
+      <tr>
+        <th>Title</th>
+        <th>Director</th>
+        <th>Tickets</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="movieList"></tbody>
+  </table>
+  <p id="message" class="text-success fw-bold mt-2"></p>
+</div>
+
+<script>
+  function logout() {
+    localStorage.removeItem('userRole');
+    window.location.href = 'login.html';
+  }
+
+  function loadMovies() {
+    fetch('http://localhost:5000/movies')
+      .then(res => res.json())
+      .then(movies => {
+        const list = document.getElementById('movieList');
+        list.innerHTML = '';
+
+        movies.forEach(movie => {
+          const row = document.createElement('tr');
+          const btn = document.createElement('button');
+
+          if (movie.tickets > 0) {
+            btn.textContent = 'Book Now';
+            btn.className = 'btn btn-primary btn-sm';
+            btn.onclick = () => bookMovie(movie._id);
+          } else {
+            btn.textContent = 'Sold Out';
+            btn.className = 'btn btn-secondary btn-sm';
+            btn.disabled = true;
+          }
+
+          row.innerHTML = `
+            <td>${movie.title}</td>
+            <td>${movie.director}</td>
+            <td>${movie.tickets}</td>
+          `;
+          const action = document.createElement('td');
+          action.appendChild(btn);
+          row.appendChild(action);
+
+          list.appendChild(row);
+        });
+      });
+  }
+
+  function bookMovie(id) {
+    fetch(`http://localhost:5000/movies/${id}/book`, {
+      method: 'POST'
+    })
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById('message').textContent = '✅ ' + data.message;
+      loadMovies();
+    })
+    .catch(() => {
+      document.getElementById('message').textContent = '❌ Booking failed.';
+    });
+  }
+
+  loadMovies();
+</script>
+</body>
+</html>

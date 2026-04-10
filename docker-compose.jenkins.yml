@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+
+  mongodb-ci:
+    image: mongo:7.0
+    container_name: mongodb-ci
+    restart: always
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo_ci_data:/data/db
+
+  backend-ci:
+    image: node:18
+    container_name: backend-ci
+    restart: always
+    ports:
+      - "5001:5000"
+    environment:
+      - MONGO_URL=mongodb://mongodb-ci:27017/moviedb
+    depends_on:
+      - mongodb-ci
+    volumes:
+      - ./:/app
+    working_dir: /app
+    command: sh -c "npm install && node server.js"
+
+volumes:
+  mongo_ci_data:
+    driver: local

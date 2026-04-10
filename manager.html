@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Movie Manager Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <script>
+    const role = localStorage.getItem('userRole');
+    if (role !== 'manager') {
+      alert('Access denied! Only managers can access this page.');
+      window.location.href = 'index.html';
+    }
+  </script>
+
+  <div class="container mt-5">
+    <h2 class="text-center mb-4">🎬 Movie Manager Dashboard</h2>
+    <button class="btn btn-secondary mb-3 float-end" onclick="logout()">Logout</button>
+
+    <!-- ADD MOVIE FORM -->
+    <div class="mb-4">
+      <h5>Add New Movie</h5>
+      <input type="text" id="title" class="form-control mb-2" placeholder="Movie Title">
+      <input type="text" id="director" class="form-control mb-2" placeholder="director">
+      <input type="number" id="tickets" class="form-control mb-2" placeholder="Available Tickets">
+      <button class="btn btn-success" onclick="addMovie()">Add Movie</button>
+      <p id="addMessage" class="mt-2 text-success"></p>
+    </div>
+
+    <!-- MOVIE LIST -->
+    <h5>All Movies</h5>
+    <table class="table table-bordered">
+      <thead class="table-light">
+        <tr>
+          <th>Title</th>
+          <th>Director</th>
+          <th>Tickets</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="movieList"></tbody>
+    </table>
+
+    <!-- EDIT MOVIE FORM -->
+    <div id="editSection" class="mt-4" style="display: none;">
+      <h5>Edit Movie</h5>
+      <input type="hidden" id="editId">
+      <input type="text" id="editTitle" class="form-control mb-2" placeholder="New Title">
+      <input type="text" id="editDirector" class="form-control mb-2" placeholder="New Director">
+      <input type="number" id="editTickets" class="form-control mb-2" placeholder="New Tickets">
+      <button class="btn btn-primary" onclick="submitEdit()">Update Movie</button>
+      <p id="editMessage" class="mt-2 text-success"></p>
+    </div>
+  </div>
+
+  <script>
+    function logout() {
+      localStorage.removeItem("userRole");
+      window.location.href = "index.html";
+    }
+
+    function addMovie() {
+      const title = document.getElementById("title").value.trim();
+      const director = document.getElementById("director").value.trim();
+      const tickets = parseInt(document.getElementById("tickets").value);
+
+      if (!title || !director || isNaN(tickets) || tickets < 0) {
+        document.getElementById("addMessage").textContent = "❌ Fill all fields correctly";
+        return;
+      }
+
+      fetch("http://16.16.233.152:5000/movies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, director, tickets })
+      })
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("addMessage").textContent = "✅ Movie added successfully";
+          document.getElementById("title").value = '';
+          document.getElementById("director").value = '';
+          document.getElementById("tickets").value = '';
+          loadMovies();
+        })
+        .catch(err => {
+          document.getElementById("addMessage").textContent = "❌ Failed to add movie";
+        });
+    }
+
+    function loadMovies() {
+  fetch("http://16.16.233.152:5000/movies")
+    .then(res => {
+      if (!res.ok) throw new Error("Failed to fetch movies");
+      return res.json();
+    })
+    .then(movies => {
+      const list = document.getElementById("movieList");
+      list.innerHTML = "";
+
+      if (movies.length === 0) {
+        list.innerHTML = `<tr><td colspan="4" class="text-center">No movies available</td></tr>`;
+        return;
+      }
+
+      movies.forEach(movie => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${movie.title}</td>
+          <td>${movie.director}</td>
+          <td>${movie.tickets}</td>
+          <td>
+            <button class="btn btn-warning btn-sm me-2" onclick="editMovie('${movie._id}', \`${movie.title}\`, \`${movie.director}\`, ${movie.tickets})">Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteMovie('${movie._id}')">Delete</button>
+          </td>
+        `;
+        list.appendChild(row);
+      });
+    })
+    .catch(err => {
+      console.error("🔴 Error loading movies:", err);
+      document.getElementById("movieList").innerHTML = `<tr><td colspan="4" class="text-danger text-center">Error loading movies</td></tr>`;
+    });
+}
+
+
+
+    function editMovie(id, title, director, tickets) {
+      document.getElementById("editId").value = id;
+      document.getElementById("editTitle").value = title;
+      document.getElementById("editDirector").value = director;
+      document.getElementById("editTickets").value = tickets;
+      document.getElementById("editSection").style.display = "block";
+      document.getElementById("editMessage").textContent = '';
+    }
+
+    function submitEdit() {
+      const id = document.getElementById("editId").value;
+      const title = document.getElementById("editTitle").value.trim();
+      const director = document.getElementById("editDirector").value.trim();
+      const tickets = parseInt(document.getElementById("editTickets").value);
+
+      if (!title || !director || isNaN(tickets) || tickets < 0) {
+        document.getElementById("editMessage").textContent = "❌ Fill all fields correctly";
+        return;
+      }
+
+      fetch(`http://16.16.233.152:5000/movies/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, director, tickets })
+      })
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("editMessage").textContent = "✅ Movie updated";
+          document.getElementById("editSection").style.display = "none";
+          loadMovies();
+        })
+        .catch(err => {
+          document.getElementById("editMessage").textContent = "❌ Failed to update movie";
+        });
+    }
+
+    function deleteMovie(id) {
+      if (!confirm("Are you sure you want to delete this movie?")) return;
+
+      fetch(`http://16.16.233.152:5000/movies/${id}`, {
+        method: "DELETE"
+      })
+        .then(res => res.json())
+        .then(data => {
+          loadMovies();
+        })
+        .catch(err => console.error("Delete error:", err));
+    }
+
+    // Initial Load
+    loadMovies();
+  </script>
+</body>
+</html>

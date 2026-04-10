@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login - Movie System</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+  <div class="login-box">
+    <h2 id="formTitle">Login</h2>
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+    <input type="password" id="confirmPassword" placeholder="Confirm Password" style="display:none" />
+    <button id="submitBtn" onclick="login()">Login</button>
+    <p id="message"></p>
+
+    <!-- Disclaimer -->
+    <div style="margin-top:15px; padding:10px; background:#fff3cd; border:1px solid #ffc107; border-radius:8px; font-size:13px;">
+      <strong>📌 Demo Credentials:</strong><br>
+      👔 Manager: <code>manager@cinema.com</code> / <code>123456</code><br>
+      🧑‍💼 Staff: <code>staff@cinema.com</code> / <code>123456</code><br>
+      🙋 Public: <code>public@cinema.com</code> / <code>123456</code><br><br>
+      <strong>⚠️ Note:</strong> You can also <strong>Sign Up</strong> for a new account, but it will direct you to an empty dashboard as the public features are currently <em>under development</em>.
+    </div>
+
+    <p style="margin-top:10px;">Don't have an account? <a href="#" onclick="toggleForm()">Sign Up</a></p>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
