@@ -1,1 +1,1 @@
-# Movie System deployed at AWS
+# Movie System deployed at AWS EC2 instance
