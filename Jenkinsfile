@@ -1,37 +1,69 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'markhobson/maven-chrome:jdk-11'
+            args '--network host -v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
+
+    environment {
+        COMMIT_EMAIL = ""
+    }
 
     stages {
 
-        stage('Clone Repository') {
+        stage('Clone App') {
             steps {
                 git branch: 'main',
                     url: 'https://github.com/moizaimran33/Movie_system.git'
             }
         }
 
-        stage('Build & Deploy with Docker') {
+        stage('Get Committer Email') {
             steps {
-                sh 'docker-compose -f docker-compose.jenkins.yml down || true'
-                sh 'docker-compose -f docker-compose.jenkins.yml up -d --build'
+                script {
+                    COMMIT_EMAIL = sh(
+                        script: "git log -1 --pretty=format:'%ae'",
+                        returnStdout: true
+                    ).trim()
+                    echo "Committer email: ${COMMIT_EMAIL}"
+                }
             }
         }
 
-        stage('Verify') {
+        stage('Clone Tests') {
             steps {
-                sh 'sleep 10'
-                sh 'docker ps | grep backend-ci'
-                sh 'docker ps | grep mongodb-ci'
+                dir('movie-tests') {
+                    git branch: 'main',
+                        url: 'https://github.com/moizaimran33/movie-system-tests.git'
+                }
+            }
+        }
+
+        stage('Run Selenium Tests') {
+            steps {
+                dir('movie-tests') {
+                    sh 'mvn test'
+                }
+            }
+            post {
+                always {
+                    junit 'movie-tests/target/surefire-reports/*.xml'
+                }
             }
         }
     }
 
     post {
         success {
-            echo 'Pipeline completed! App running on port 5001.'
+            mail to: "${COMMIT_EMAIL}",
+                 subject: "✅ Tests PASSED: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "Your commit passed all Selenium tests! Build: ${env.BUILD_NUMBER} URL: ${env.BUILD_URL}"
         }
         failure {
-            echo 'Pipeline failed!'
+            mail to: "${COMMIT_EMAIL}",
+                 subject: "❌ Tests FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "Your commit failed Selenium tests. Build: ${env.BUILD_NUMBER} URL: ${env.BUILD_URL}"
         }
     }
 }
