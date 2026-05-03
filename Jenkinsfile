@@ -1,15 +1,19 @@
+
 pipeline {
-    agent none
+    agent {
+        docker {
+            image 'markhobson/maven-chrome:jdk-11'
+            args '--network host -v /var/run/docker.sock:/var/run/docker.sock -v /home/ubuntu/movie-system:/home/ubuntu/movie-system -v /usr/bin/docker:/usr/bin/docker'
+        }
+    }
     environment { COMMIT_EMAIL = "" }
     stages {
         stage('Clone App') {
-            agent { docker { image 'markhobson/maven-chrome:jdk-11' args '--network host -v /var/run/docker.sock:/var/run/docker.sock' } }
             steps {
                 git branch: 'main', url: 'https://github.com/moizaimran33/Movie_system.git'
             }
         }
         stage('Get Committer Email') {
-            agent { docker { image 'markhobson/maven-chrome:jdk-11' args '--network host -v /var/run/docker.sock:/var/run/docker.sock' } }
             steps {
                 script {
                     COMMIT_EMAIL = sh(script: "git log -1 --pretty=format:'%ae'", returnStdout: true).trim()
@@ -18,15 +22,13 @@ pipeline {
             }
         }
         stage('Deploy App') {
-            agent { label 'built-in' }
             steps {
-                sh 'cd /home/ubuntu/movie-system && docker compose down || true'
-                sh 'cd /home/ubuntu/movie-system && docker compose up -d'
+                sh 'docker compose -f /home/ubuntu/movie-system/docker-compose.yml down || true'
+                sh 'docker compose -f /home/ubuntu/movie-system/docker-compose.yml up -d'
                 sh 'sleep 10'
             }
         }
         stage('Clone Tests') {
-            agent { docker { image 'markhobson/maven-chrome:jdk-11' args '--network host -v /var/run/docker.sock:/var/run/docker.sock' } }
             steps {
                 dir('movie-tests') {
                     git branch: 'main', url: 'https://github.com/moizaimran33/movie-system-tests.git'
@@ -34,7 +36,6 @@ pipeline {
             }
         }
         stage('Run Selenium Tests') {
-            agent { docker { image 'markhobson/maven-chrome:jdk-11' args '--network host -v /var/run/docker.sock:/var/run/docker.sock' } }
             steps {
                 dir('movie-tests') { sh 'mvn test' }
             }
