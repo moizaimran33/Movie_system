@@ -2,7 +2,7 @@ pipeline {
     agent {
         docker {
             image 'markhobson/maven-chrome:jdk-11'
-            args '--network host -v /var/run/docker.sock:/var/run/docker.sock -v /home/ubuntu/movie-system:/home/ubuntu/movie-system -v /usr/bin/docker:/usr/bin/docker -v /usr/local/bin/docker-compose:/usr/local/bin/docker-compose'
+            args '--network host --group-add 986 -v /var/run/docker.sock:/var/run/docker.sock -v /home/ubuntu/movie-system:/home/ubuntu/movie-system -v /usr/bin/docker:/usr/bin/docker -v /usr/local/bin/docker-compose:/usr/local/bin/docker-compose'
         }
     }
     environment { COMMIT_EMAIL = "" }
