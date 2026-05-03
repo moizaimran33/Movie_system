@@ -5,46 +5,38 @@ pipeline {
             args '--network host -v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
-
-    environment {
-        COMMIT_EMAIL = ""
-    }
-
+    environment { COMMIT_EMAIL = "" }
     stages {
-
         stage('Clone App') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/moizaimran33/Movie_system.git'
+                git branch: 'main', url: 'https://github.com/moizaimran33/Movie_system.git'
             }
         }
-
         stage('Get Committer Email') {
             steps {
                 script {
-                    COMMIT_EMAIL = sh(
-                        script: "git log -1 --pretty=format:'%ae'",
-                        returnStdout: true
-                    ).trim()
+                    COMMIT_EMAIL = sh(script: "git log -1 --pretty=format:'%ae'", returnStdout: true).trim()
                     echo "Committer email: ${COMMIT_EMAIL}"
                 }
             }
         }
-
+        stage('Deploy App') {
+            steps {
+                sh 'cd /home/ubuntu/movie-system && docker compose down || true'
+                sh 'cd /home/ubuntu/movie-system && docker compose up -d'
+                sh 'sleep 10'
+            }
+        }
         stage('Clone Tests') {
             steps {
                 dir('movie-tests') {
-                    git branch: 'main',
-                        url: 'https://github.com/moizaimran33/movie-system-tests.git'
+                    git branch: 'main', url: 'https://github.com/moizaimran33/movie-system-tests.git'
                 }
             }
         }
-
         stage('Run Selenium Tests') {
             steps {
-                dir('movie-tests') {
-                    sh 'mvn test'
-                }
+                dir('movie-tests') { sh 'mvn test' }
             }
             post {
                 always {
@@ -53,17 +45,16 @@ pipeline {
             }
         }
     }
-
     post {
         success {
             mail to: "${COMMIT_EMAIL}",
-                 subject: "✅ Tests PASSED: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                 body: "Your commit passed all Selenium tests! Build: ${env.BUILD_NUMBER} URL: ${env.BUILD_URL}"
+                 subject: "✅ Tests PASSED - Movie System",
+                 body: "All 17 Selenium tests passed successfully."
         }
         failure {
             mail to: "${COMMIT_EMAIL}",
-                 subject: "❌ Tests FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                 body: "Your commit failed Selenium tests. Build: ${env.BUILD_NUMBER} URL: ${env.BUILD_URL}"
+                 subject: "❌ Tests FAILED - Movie System",
+                 body: "One or more Selenium tests failed. Check Jenkins for details."
         }
     }
 }
