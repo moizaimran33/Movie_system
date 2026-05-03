@@ -1,18 +1,15 @@
 pipeline {
-    agent {
-        docker {
-            image 'markhobson/maven-chrome:jdk-11'
-            args '--network host -v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    agent none
     environment { COMMIT_EMAIL = "" }
     stages {
         stage('Clone App') {
+            agent { docker { image 'markhobson/maven-chrome:jdk-11' args '--network host -v /var/run/docker.sock:/var/run/docker.sock' } }
             steps {
                 git branch: 'main', url: 'https://github.com/moizaimran33/Movie_system.git'
             }
         }
         stage('Get Committer Email') {
+            agent { docker { image 'markhobson/maven-chrome:jdk-11' args '--network host -v /var/run/docker.sock:/var/run/docker.sock' } }
             steps {
                 script {
                     COMMIT_EMAIL = sh(script: "git log -1 --pretty=format:'%ae'", returnStdout: true).trim()
@@ -21,6 +18,7 @@ pipeline {
             }
         }
         stage('Deploy App') {
+            agent { label 'built-in' }
             steps {
                 sh 'cd /home/ubuntu/movie-system && docker compose down || true'
                 sh 'cd /home/ubuntu/movie-system && docker compose up -d'
@@ -28,6 +26,7 @@ pipeline {
             }
         }
         stage('Clone Tests') {
+            agent { docker { image 'markhobson/maven-chrome:jdk-11' args '--network host -v /var/run/docker.sock:/var/run/docker.sock' } }
             steps {
                 dir('movie-tests') {
                     git branch: 'main', url: 'https://github.com/moizaimran33/movie-system-tests.git'
@@ -35,6 +34,7 @@ pipeline {
             }
         }
         stage('Run Selenium Tests') {
+            agent { docker { image 'markhobson/maven-chrome:jdk-11' args '--network host -v /var/run/docker.sock:/var/run/docker.sock' } }
             steps {
                 dir('movie-tests') { sh 'mvn test' }
             }
@@ -54,7 +54,7 @@ pipeline {
         failure {
             mail to: "${COMMIT_EMAIL}",
                  subject: "❌ Tests FAILED - Movie System",
-                 body: "One or more Selenium tests failed. Check Jenkins for details."
+                 body: "One or more tests failed. Check Jenkins for details."
         }
     }
 }
