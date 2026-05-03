@@ -1,9 +1,8 @@
-
 pipeline {
     agent {
         docker {
             image 'markhobson/maven-chrome:jdk-11'
-            args '--network host -v /var/run/docker.sock:/var/run/docker.sock -v /home/ubuntu/movie-system:/home/ubuntu/movie-system -v /usr/bin/docker:/usr/bin/docker'
+            args '--network host -v /var/run/docker.sock:/var/run/docker.sock -v /home/ubuntu/movie-system:/home/ubuntu/movie-system -v /usr/bin/docker:/usr/bin/docker -v /usr/local/bin/docker-compose:/usr/local/bin/docker-compose'
         }
     }
     environment { COMMIT_EMAIL = "" }
@@ -23,8 +22,8 @@ pipeline {
         }
         stage('Deploy App') {
             steps {
-                sh 'docker compose -f /home/ubuntu/movie-system/docker-compose.yml down || true'
-                sh 'docker compose -f /home/ubuntu/movie-system/docker-compose.yml up -d'
+                sh 'docker-compose -f /home/ubuntu/movie-system/docker-compose.yml down || true'
+                sh 'docker-compose -f /home/ubuntu/movie-system/docker-compose.yml up -d'
                 sh 'sleep 10'
             }
         }
