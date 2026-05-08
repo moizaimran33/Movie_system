@@ -1,17 +1,17 @@
 pipeline {
-    agent {
-        docker {
-            image 'markhobson/maven-chrome:jdk-11'
-            args '--network host --group-add 986 -v /var/run/docker.sock:/var/run/docker.sock -v /home/ubuntu/movie-system:/home/ubuntu/movie-system -v /usr/bin/docker:/usr/bin/docker -v /usr/local/bin/docker-compose:/usr/local/bin/docker-compose'
-        }
+    agent any  // Use Jenkins server directly instead of Docker container
+    
+    environment { 
+        COMMIT_EMAIL = "" 
     }
-    environment { COMMIT_EMAIL = "" }
+    
     stages {
         stage('Clone App') {
             steps {
                 git branch: 'main', url: 'https://github.com/moizaimran33/Movie_system.git'
             }
         }
+        
         stage('Get Committer Email') {
             steps {
                 script {
@@ -20,13 +20,16 @@ pipeline {
                 }
             }
         }
+        
         stage('Deploy App') {
             steps {
-                sh 'docker-compose -f /home/ubuntu/movie-system/docker-compose.yml down || true'
-                sh 'docker-compose -f /home/ubuntu/movie-system/docker-compose.yml up -d'
+                // Using correct path with capital 'M' in Movie_system
+                sh 'cd /home/ubuntu/Movie_system && docker-compose down || true'
+                sh 'cd /home/ubuntu/Movie_system && docker-compose up -d --build'
                 sh 'sleep 10'
             }
         }
+        
         stage('Clone Tests') {
             steps {
                 dir('movie-tests') {
@@ -34,9 +37,12 @@ pipeline {
                 }
             }
         }
+        
         stage('Run Selenium Tests') {
             steps {
-                dir('movie-tests') { sh 'mvn test' }
+                dir('movie-tests') { 
+                    sh 'mvn test' 
+                }
             }
             post {
                 always {
@@ -45,16 +51,17 @@ pipeline {
             }
         }
     }
+    
     post {
         success {
             mail to: "${COMMIT_EMAIL}",
                  subject: "✅ Tests PASSED - Movie System",
-                 body: "All 17 Selenium tests passed successfully."
+                 body: "All Selenium tests passed successfully.\n\nBuild URL: ${BUILD_URL}"
         }
         failure {
             mail to: "${COMMIT_EMAIL}",
                  subject: "❌ Tests FAILED - Movie System",
-                 body: "One or more tests failed. Check Jenkins for details."
+                 body: "One or more tests failed. Check Jenkins for details.\n\nBuild URL: ${BUILD_URL}"
         }
     }
 }
