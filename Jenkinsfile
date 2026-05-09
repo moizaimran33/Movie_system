@@ -2,7 +2,7 @@ pipeline {
     agent any
     
     environment { 
-        COMMIT_EMAIL = "" 
+        COMMIT_EMAIL = ""
     }
     
     stages {
@@ -15,8 +15,11 @@ pipeline {
         stage('Get Committer Email') {
             steps {
                 script {
-                    env.COMMIT_EMAIL = sh(script: "git log -1 --pretty=format:'%ae'", returnStdout: true).trim()
+                    // Get the actual committer email from the latest commit
+                    sh(script: "git log -1 --pretty=format:'%ae' > committer.txt", returnStdout: false)
+                    env.COMMIT_EMAIL = readFile('committer.txt').trim()
                     echo "Committer email: ${env.COMMIT_EMAIL}"
+                    sh 'rm -f committer.txt'
                 }
             }
         }
@@ -24,13 +27,8 @@ pipeline {
         stage('Deploy App') {
             steps {
                 sh '''
-                    # Stop and remove all existing containers
                     docker-compose down -v || true
-                    
-                    # Remove any orphaned containers
                     docker rm -f mongodb backend || true
-                    
-                    # Build and start fresh
                     docker-compose up -d --build
                     sleep 10
                 '''
@@ -61,14 +59,41 @@ pipeline {
     
     post {
         success {
-            mail to: "${env.COMMIT_EMAIL ?: 'moizaimran33@gmail.com'}",
-                 subject: "✅ Tests PASSED - Movie System",
-                 body: "All Selenium tests passed successfully.\n\nBuild URL: ${BUILD_URL}"
+            script {
+                def recipient = env.COMMIT_EMAIL ?: 'moizaimran33@gmail.com'
+                echo "Sending success email to: ${recipient}"
+                emailext(
+                    to: recipient,
+                    subject: "✅ Tests PASSED - Movie System - Build ${env.BUILD_NUMBER}",
+                    body: """
+                        <h2>Build Successful!</h2>
+                        <p>All Selenium tests passed successfully.</p>
+                        <p>Build URL: <a href='${env.BUILD_URL}'>${env.BUILD_URL}</a></p>
+                        <p>Project: Movie System</p>
+                        <p>Status: SUCCESS</p>
+                    `,
+                    mimeType: 'text/html'
+                )
+            }
         }
         failure {
-            mail to: "${env.COMMIT_EMAIL ?: 'moizaimran33@gmail.com'}",
-                 subject: "❌ Tests FAILED - Movie System",
-                 body: "One or more tests failed. Check Jenkins for details.\n\nBuild URL: ${BUILD_URL}"
+            script {
+                def recipient = env.COMMIT_EMAIL ?: 'moizaimran33@gmail.com'
+                echo "Sending failure email to: ${recipient}"
+                emailext(
+                    to: recipient,
+                    subject: "❌ Tests FAILED - Movie System - Build ${env.BUILD_NUMBER}",
+                    body: """
+                        <h2>Build Failed!</h2>
+                        <p>One or more tests failed.</p>
+                        <p>Build URL: <a href='${env.BUILD_URL}'>${env.BUILD_URL}</a></p>
+                        <p>Project: Movie System</p>
+                        <p>Status: FAILURE</p>
+                        <p>Check Jenkins console for details.</p>
+                    `,
+                    mimeType: 'text/html'
+                )
+            }
         }
     }
 }
