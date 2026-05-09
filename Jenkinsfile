@@ -6,9 +6,7 @@ pipeline {
             steps {
                 checkout([$class: 'GitSCM',
                     branches: [[name: '*/main']],
-                    extensions: [
-                        [$class: 'CloneOption', depth: 0, shallow: false]
-                    ],
+                    extensions: [[$class: 'CloneOption', depth: 0, shallow: false]],
                     userRemoteConfigs: [[url: 'https://github.com/moizaimran33/Movie_system.git']]
                 ])
             }
@@ -17,13 +15,11 @@ pipeline {
         stage('Get Committer Email') {
             steps {
                 script {
-                    // This gets the email of whoever made the commit
                     def email = sh(script: "git show -s --format='%ae' HEAD", returnStdout: true).trim()
                     
                     if (email && email != '' && email != 'null') {
                         env.COMMIT_EMAIL = email
                     } else {
-                        // Fallback for any user
                         env.COMMIT_EMAIL = sh(script: "git show -s --format='%ce' HEAD", returnStdout: true).trim()
                     }
                     
@@ -71,9 +67,26 @@ pipeline {
                 def recipient = env.COMMIT_EMAIL ?: 'moizaimran33@gmail.com'
                 mail(
                     to: recipient,
-                    subject: "✅ Tests PASSED - Build ${env.BUILD_NUMBER}",
-                    body: "Build successful!\n\nBuild URL: ${env.BUILD_URL}\nCommitter: ${recipient}"
+                    subject: "✅ Tests PASSED - Movie System - Build ${env.BUILD_NUMBER}",
+                    body: """
+From: moizaimran33@gmail.com (Jenkins CI/CD System)
+
+Hello,
+
+All Selenium tests passed successfully for your commit.
+
+Build Details:
+- Build URL: ${env.BUILD_URL}
+- Project: Movie System
+- Status: SUCCESS
+- Your Email: ${recipient}
+- Build Number: ${env.BUILD_NUMBER}
+
+This is an automated message from Jenkins CI/CD pipeline.
+For questions, contact: moizaimran33@gmail.com
+                    """
                 )
+                echo "Email sent from moizaimran33@gmail.com to ${recipient}"
             }
         }
         failure {
@@ -81,9 +94,28 @@ pipeline {
                 def recipient = env.COMMIT_EMAIL ?: 'moizaimran33@gmail.com'
                 mail(
                     to: recipient,
-                    subject: "❌ Tests FAILED - Build ${env.BUILD_NUMBER}",
-                    body: "Build failed!\n\nBuild URL: ${env.BUILD_URL}\nCommitter: ${recipient}\n\nCheck console for details."
+                    subject: "❌ Tests FAILED - Movie System - Build ${env.BUILD_NUMBER}",
+                    body: """
+From: moizaimran33@gmail.com (Jenkins CI/CD System)
+
+Hello,
+
+One or more tests failed for your commit.
+
+Build Details:
+- Build URL: ${env.BUILD_URL}
+- Project: Movie System
+- Status: FAILURE
+- Your Email: ${recipient}
+- Build Number: ${env.BUILD_NUMBER}
+
+Please check Jenkins console for details.
+
+This is an automated message from Jenkins CI/CD pipeline.
+For questions, contact: moizaimran33@gmail.com
+                    """
                 )
+                echo "Email sent from moizaimran33@gmail.com to ${recipient}"
             }
         }
     }
