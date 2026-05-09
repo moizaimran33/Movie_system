@@ -1,50 +1,33 @@
 pipeline {
     agent any
     
-    environment {
-        COMMIT_EMAIL = ""
-    }
-    
     stages {
-        stage('Clone App') {
+        stage('Clone App with Full History') {
             steps {
-                // Clone with full history to get commit details
-                checkout scmGit(
-                    branches: [[name: 'main']],
-                    userRemoteConfigs: [[url: 'https://github.com/moizaimran33/Movie_system.git']],
-                    extensions: [[$class: 'CloneOption', depth: 10, noTags: false, reference: '', shallow: false]]
-                )
+                checkout([$class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    extensions: [
+                        [$class: 'CloneOption', depth: 0, shallow: false]
+                    ],
+                    userRemoteConfigs: [[url: 'https://github.com/moizaimran33/Movie_system.git']]
+                ])
             }
         }
         
         stage('Get Committer Email') {
             steps {
                 script {
-                    // Method 1: Try to get from GitHub environment variables
-                    if (env.GIT_COMMITTER_EMAIL && env.GIT_COMMITTER_EMAIL != '') {
-                        env.COMMIT_EMAIL = env.GIT_COMMITTER_EMAIL
-                        echo "Got email from GIT_COMMITTER_EMAIL: ${env.COMMIT_EMAIL}"
-                    }
-                    // Method 2: Get from git log
-                    else {
-                        sh 'git log -1 --pretty=format:"%ae" > email.txt'
-                        def email = readFile('email.txt').trim()
-                        sh 'rm -f email.txt'
-                        
-                        if (email && email != '') {
-                            env.COMMIT_EMAIL = email
-                            echo "Got email from git log: ${env.COMMIT_EMAIL}"
-                        } else {
-                            // Method 3: Try committer email
-                            sh 'git log -1 --pretty=format:"%ce" > email.txt'
-                            email = readFile('email.txt').trim()
-                            sh 'rm -f email.txt'
-                            env.COMMIT_EMAIL = email ?: 'moizaimran33@gmail.com'
-                            echo "Got email from git committer: ${env.COMMIT_EMAIL}"
-                        }
+                    // This gets the email of whoever made the commit
+                    def email = sh(script: "git show -s --format='%ae' HEAD", returnStdout: true).trim()
+                    
+                    if (email && email != '' && email != 'null') {
+                        env.COMMIT_EMAIL = email
+                    } else {
+                        // Fallback for any user
+                        env.COMMIT_EMAIL = sh(script: "git show -s --format='%ce' HEAD", returnStdout: true).trim()
                     }
                     
-                    echo "Final committer email: ${env.COMMIT_EMAIL}"
+                    echo "Sending email to: ${env.COMMIT_EMAIL}"
                 }
             }
         }
@@ -85,47 +68,21 @@ pipeline {
     post {
         success {
             script {
-                echo "Sending success email to: ${env.COMMIT_EMAIL}"
+                def recipient = env.COMMIT_EMAIL ?: 'moizaimran33@gmail.com'
                 mail(
-                    to: "${env.COMMIT_EMAIL}",
-                    subject: "✅ Tests PASSED - Movie System - Build ${env.BUILD_NUMBER}",
-                    body: """
-All Selenium tests passed successfully.
-
-Build Details:
-- Build URL: ${env.BUILD_URL}
-- Project: Movie System
-- Status: SUCCESS
-- Committer: ${env.COMMIT_EMAIL}
-- Build Number: ${env.BUILD_NUMBER}
-
-Tests run: 17
-Failures: 0
-Errors: 0
-
-This email was sent by Jenkins CI/CD pipeline.
-                    """
+                    to: recipient,
+                    subject: "✅ Tests PASSED - Build ${env.BUILD_NUMBER}",
+                    body: "Build successful!\n\nBuild URL: ${env.BUILD_URL}\nCommitter: ${recipient}"
                 )
             }
         }
         failure {
             script {
-                echo "Sending failure email to: ${env.COMMIT_EMAIL}"
+                def recipient = env.COMMIT_EMAIL ?: 'moizaimran33@gmail.com'
                 mail(
-                    to: "${env.COMMIT_EMAIL}",
-                    subject: "❌ Tests FAILED - Movie System - Build ${env.BUILD_NUMBER}",
-                    body: """
-One or more tests failed.
-
-Build Details:
-- Build URL: ${env.BUILD_URL}
-- Project: Movie System
-- Status: FAILURE
-- Committer: ${env.COMMIT_EMAIL}
-- Build Number: ${env.BUILD_NUMBER}
-
-Please check Jenkins console for details.
-                    """
+                    to: recipient,
+                    subject: "❌ Tests FAILED - Build ${env.BUILD_NUMBER}",
+                    body: "Build failed!\n\nBuild URL: ${env.BUILD_URL}\nCommitter: ${recipient}\n\nCheck console for details."
                 )
             }
         }
