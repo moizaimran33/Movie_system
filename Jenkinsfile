@@ -1,5 +1,5 @@
 pipeline {
-    agent any  // Use Jenkins server directly instead of Docker container
+    agent any
     
     environment { 
         COMMIT_EMAIL = "" 
@@ -15,17 +15,16 @@ pipeline {
         stage('Get Committer Email') {
             steps {
                 script {
-                    COMMIT_EMAIL = sh(script: "git log -1 --pretty=format:'%ae'", returnStdout: true).trim()
-                    echo "Committer email: ${COMMIT_EMAIL}"
+                    env.COMMIT_EMAIL = sh(script: "git log -1 --pretty=format:'%ae'", returnStdout: true).trim()
+                    echo "Committer email: ${env.COMMIT_EMAIL}"
                 }
             }
         }
         
         stage('Deploy App') {
             steps {
-                // Using correct path with capital 'M' in Movie_system
-                sh 'cd /home/ubuntu/Movie_system && docker-compose down || true'
-                sh 'cd /home/ubuntu/Movie_system && docker-compose up -d --build'
+                sh 'docker-compose down || true'
+                sh 'docker-compose up -d --build'
                 sh 'sleep 10'
             }
         }
@@ -54,12 +53,12 @@ pipeline {
     
     post {
         success {
-            mail to: "${COMMIT_EMAIL}",
+            mail to: "${env.COMMIT_EMAIL}",
                  subject: "✅ Tests PASSED - Movie System",
                  body: "All Selenium tests passed successfully.\n\nBuild URL: ${BUILD_URL}"
         }
         failure {
-            mail to: "${COMMIT_EMAIL}",
+            mail to: "${env.COMMIT_EMAIL}",
                  subject: "❌ Tests FAILED - Movie System",
                  body: "One or more tests failed. Check Jenkins for details.\n\nBuild URL: ${BUILD_URL}"
         }
