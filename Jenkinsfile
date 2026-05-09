@@ -23,9 +23,15 @@ pipeline {
         
         stage('Deploy App') {
             steps {
-                sh 'docker-compose down || true'
-                sh 'docker-compose up -d --build'
-                sh 'sleep 10'
+                sh '''
+                    # Clean up existing containers
+                    docker-compose down -v || true
+                    docker rm -f mongodb || true
+                    
+                    # Build and start fresh
+                    docker-compose up -d --build
+                    sleep 10
+                '''
             }
         }
         
@@ -53,12 +59,12 @@ pipeline {
     
     post {
         success {
-            mail to: "${env.COMMIT_EMAIL ?: 'admin@example.com'}",
+            mail to: "${env.COMMIT_EMAIL ?: 'moizaimran33@gmail.com'}",
                  subject: "✅ Tests PASSED - Movie System",
                  body: "All Selenium tests passed successfully.\n\nBuild URL: ${BUILD_URL}"
         }
         failure {
-            mail to: "${env.COMMIT_EMAIL ?: 'admin@example.com'}",
+            mail to: "${env.COMMIT_EMAIL ?: 'moizaimran33@gmail.com'}",
                  subject: "❌ Tests FAILED - Movie System",
                  body: "One or more tests failed. Check Jenkins for details.\n\nBuild URL: ${BUILD_URL}"
         }
