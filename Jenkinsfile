@@ -24,9 +24,11 @@ pipeline {
         stage('Deploy App') {
             steps {
                 sh '''
-                    # Clean up existing containers
+                    # Stop and remove all existing containers
                     docker-compose down -v || true
-                    docker rm -f mongodb || true
+                    
+                    # Remove any orphaned containers
+                    docker rm -f mongodb backend || true
                     
                     # Build and start fresh
                     docker-compose up -d --build
