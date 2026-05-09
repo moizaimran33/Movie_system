@@ -15,11 +15,8 @@ pipeline {
         stage('Get Committer Email') {
             steps {
                 script {
-                    // Get the actual committer email from the latest commit
-                    sh(script: "git log -1 --pretty=format:'%ae' > committer.txt", returnStdout: false)
-                    env.COMMIT_EMAIL = readFile('committer.txt').trim()
+                    env.COMMIT_EMAIL = sh(script: "git log -1 --pretty=format:'%ae'", returnStdout: true).trim()
                     echo "Committer email: ${env.COMMIT_EMAIL}"
-                    sh 'rm -f committer.txt'
                 }
             }
         }
@@ -62,17 +59,10 @@ pipeline {
             script {
                 def recipient = env.COMMIT_EMAIL ?: 'moizaimran33@gmail.com'
                 echo "Sending success email to: ${recipient}"
-                emailext(
+                mail(
                     to: recipient,
                     subject: "✅ Tests PASSED - Movie System - Build ${env.BUILD_NUMBER}",
-                    body: """
-                        <h2>Build Successful!</h2>
-                        <p>All Selenium tests passed successfully.</p>
-                        <p>Build URL: <a href='${env.BUILD_URL}'>${env.BUILD_URL}</a></p>
-                        <p>Project: Movie System</p>
-                        <p>Status: SUCCESS</p>
-                    `,
-                    mimeType: 'text/html'
+                    body: "All Selenium tests passed successfully.\n\nBuild URL: ${env.BUILD_URL}\nProject: Movie System\nStatus: SUCCESS\nCommitter: ${env.COMMIT_EMAIL}"
                 )
             }
         }
@@ -80,18 +70,10 @@ pipeline {
             script {
                 def recipient = env.COMMIT_EMAIL ?: 'moizaimran33@gmail.com'
                 echo "Sending failure email to: ${recipient}"
-                emailext(
+                mail(
                     to: recipient,
                     subject: "❌ Tests FAILED - Movie System - Build ${env.BUILD_NUMBER}",
-                    body: """
-                        <h2>Build Failed!</h2>
-                        <p>One or more tests failed.</p>
-                        <p>Build URL: <a href='${env.BUILD_URL}'>${env.BUILD_URL}</a></p>
-                        <p>Project: Movie System</p>
-                        <p>Status: FAILURE</p>
-                        <p>Check Jenkins console for details.</p>
-                    `,
-                    mimeType: 'text/html'
+                    body: "One or more tests failed.\n\nBuild URL: ${env.BUILD_URL}\nProject: Movie System\nStatus: FAILURE\nCommitter: ${env.COMMIT_EMAIL}\n\nCheck Jenkins console for details."
                 )
             }
         }
