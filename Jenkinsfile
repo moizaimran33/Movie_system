@@ -53,12 +53,12 @@ pipeline {
     
     post {
         success {
-            mail to: "${env.COMMIT_EMAIL}",
+            mail to: "${env.COMMIT_EMAIL ?: 'admin@example.com'}",
                  subject: "✅ Tests PASSED - Movie System",
                  body: "All Selenium tests passed successfully.\n\nBuild URL: ${BUILD_URL}"
         }
         failure {
-            mail to: "${env.COMMIT_EMAIL}",
+            mail to: "${env.COMMIT_EMAIL ?: 'admin@example.com'}",
                  subject: "❌ Tests FAILED - Movie System",
                  body: "One or more tests failed. Check Jenkins for details.\n\nBuild URL: ${BUILD_URL}"
         }
